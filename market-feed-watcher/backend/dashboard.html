@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Market Feed Watcher</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #0f172a;
+        color: #e5e7eb;
+      }
+
+      .page {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 32px 20px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 28px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+      }
+
+      .subtitle {
+        margin-top: 6px;
+        color: #94a3b8;
+      }
+
+      .status {
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: #064e3b;
+        color: #a7f3d0;
+        font-size: 13px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      button {
+        border: none;
+        border-radius: 10px;
+        padding: 10px 14px;
+        background: #2563eb;
+        color: white;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      button.secondary {
+        background: #334155;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+
+      .card {
+        background: #111827;
+        border: 1px solid #1f2937;
+        border-radius: 16px;
+        padding: 18px;
+      }
+
+      .card h2 {
+        margin: 0 0 14px;
+        font-size: 18px;
+      }
+
+      .event {
+        border-bottom: 1px solid #1f2937;
+        padding: 12px 0;
+      }
+
+      .event:last-child {
+        border-bottom: none;
+      }
+
+      .event-type {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #38bdf8;
+        letter-spacing: 0.08em;
+      }
+
+      .event-title {
+        margin-top: 4px;
+        font-weight: 700;
+      }
+
+      .event-detail {
+        margin-top: 4px;
+        color: #cbd5e1;
+        font-size: 14px;
+      }
+
+      .snapshot {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 10px 0;
+        border-bottom: 1px solid #1f2937;
+      }
+
+      .snapshot:last-child {
+        border-bottom: none;
+      }
+
+      .snapshot-title {
+        font-weight: 600;
+      }
+
+      .snapshot-meta {
+        color: #94a3b8;
+        font-size: 13px;
+      }
+
+      .empty {
+        color: #64748b;
+        font-size: 14px;
+      }
+
+      @media (max-width: 760px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .header {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 12px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="page">
+      <section class="header">
+        <div>
+          <h1>Market Feed Watcher</h1>
+          <div class="subtitle">
+            Live crawler change detection for vehicle market listings
+          </div>
+        </div>
+
+        <div class="status" id="connectionStatus">Connecting...</div>
+      </section>
+
+      <section class="actions">
+        <button onclick="runCrawler()">Run Crawler</button>
+        <button class="secondary" onclick="loadSnapshots()">Refresh Snapshots</button>
+        <button class="secondary" onclick="clearEvents()">Clear Events</button>
+      </section>
+
+      <section class="grid">
+        <div class="card">
+          <h2>Live Change Feed</h2>
+          <div id="events">
+            <div class="empty">No live changes yet.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Recent Snapshots</h2>
+          <div id="snapshots">
+            <div class="empty">No snapshots loaded yet.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const API_BASE = "http://localhost:8000";
+      const WS_URL = "ws://localhost:8000/ws/changes";
+
+      const eventsEl = document.getElementById("events");
+      const snapshotsEl = document.getElementById("snapshots");
+      const connectionStatusEl = document.getElementById("connectionStatus");
+
+      const socket = new WebSocket(WS_URL);
+
+      socket.onopen = () => {
+        connectionStatusEl.innerText = "Live feed connected";
+      };
+
+      socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        renderEvent(data.payload);
+        loadSnapshots();
+      };
+
+      socket.onclose = () => {
+        connectionStatusEl.innerText = "Live feed disconnected";
+      };
+
+      async function runCrawler() {
+        await fetch(`${API_BASE}/crawl/run`, {
+          method: "POST",
+        });
+
+        await loadSnapshots();
+      }
+
+      async function loadSnapshots() {
+        const response = await fetch(`${API_BASE}/snapshots?limit=10`);
+        const snapshots = await response.json();
+
+        if (!snapshots.length) {
+          snapshotsEl.innerHTML = `<div class="empty">No snapshots available.</div>`;
+          return;
+        }
+
+        snapshotsEl.innerHTML = snapshots
+          .map((snapshot) => {
+            return `
+              <div class="snapshot">
+                <div>
+                  <div class="snapshot-title">${snapshot.title}</div>
+                  <div class="snapshot-meta">
+                    ${snapshot.external_id} · ${snapshot.status} · ${snapshot.source}
+                  </div>
+                </div>
+                <div>
+                  Rs ${snapshot.price.toLocaleString()}
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      function renderEvent(change) {
+        if (eventsEl.querySelector(".empty")) {
+          eventsEl.innerHTML = "";
+        }
+
+        const detail = getChangeDetail(change);
+
+        const item = document.createElement("div");
+        item.className = "event";
+        item.innerHTML = `
+          <div class="event-type">${change.change_type.replaceAll("_", " ")}</div>
+          <div class="event-title">${change.title}</div>
+          <div class="event-detail">${detail}</div>
+        `;
+
+        eventsEl.prepend(item);
+      }
+
+      function getChangeDetail(change) {
+        if (change.change_type === "new_listing") {
+          return `New listing detected at Rs ${change.new_price.toLocaleString()}`;
+        }
+
+        if (change.change_type === "price_changed") {
+          return `Price changed from Rs ${change.old_price.toLocaleString()} to Rs ${change.new_price.toLocaleString()}`;
+        }
+
+        if (change.change_type === "status_changed") {
+          return `Status changed from ${change.old_status} to ${change.new_status}`;
+        }
+
+        return "Market listing changed.";
+      }
+
+      function clearEvents() {
+        eventsEl.innerHTML = `<div class="empty">No live changes yet.</div>`;
+      }
+
+      loadSnapshots();
+    </script>
+  </body>
+</html>
