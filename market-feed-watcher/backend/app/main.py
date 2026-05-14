@@ -5,21 +5,25 @@ from app.database import Base, engine, get_db
 from app.schemas import ListingInput, ListingSnapshotResponse, ChangeEvent
 from app.services.snapshot_service import process_listing_batch, get_recent_snapshots
 from app.seed_data import MOCK_LISTINGS_BATCH_1, MOCK_LISTINGS_BATCH_2
+from app.crawlers.mock_market_crawler import MockMarketCrawler
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Market Feed Watcher",
     description="A small backend system for tracking market listing changes.",
-    version="0.1.0",
+    version="0.2.0",
 )
+
+crawler = MockMarketCrawler()
 
 @app.get("/")
 def root():
     return {
         "service": "Market Feed Watcher",
         "status": "running",
-        "message": "Backend is ready."
+        "version": "0.2.0",
+        "message": "Async crawler layer is ready."
     }
 
 @app.post("/ingest", response_model=list[ChangeEvent])
@@ -27,6 +31,13 @@ def ingest_listings(
     listings: list[ListingInput],
     db: Session = Depends(get_db),
 ):
+    return process_listing_batch(db, listings)
+
+@app.post("/crawl/run", response_model=list[ChangeEvent])
+async def run_crawler(db: Session = Depends(get_db)):
+    raw_listings = await crawler.fetch_listings()
+    listings = [ListingInput(**item) for item in raw_listings]
+
     return process_listing_batch(db, listings)
 
 @app.post("/demo/batch-1", response_model=list[ChangeEvent])
