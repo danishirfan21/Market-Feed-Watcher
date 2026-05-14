@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 
 from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,10 +41,13 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Get base URL from environment (provided by Render/Railway) or fallback to localhost
+APP_URL = os.getenv("APP_URL", "http://localhost:8000").rstrip("/")
+
 crawler = MockMarketCrawler()
 http_crawler = HttpMarketCrawler(
     source="local_http_market",
-    url="http://localhost:8000/static/sample_market.html",
+    url=f"{APP_URL}/static/sample_market.html",
 )
 
 scheduler_state = {
