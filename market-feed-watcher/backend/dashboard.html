@@ -160,7 +160,7 @@
       </section>
 
       <section class="actions">
-        <button onclick="runCrawler()">Run Crawler</button>
+        <button onclick="runCrawler(event)">Run Crawler</button>
         <button class="secondary" onclick="loadSnapshots()">Refresh Snapshots</button>
         <button class="secondary" onclick="clearEvents()">Clear Events</button>
       </section>
@@ -213,13 +213,34 @@
         connectionStatusEl.innerText = "Live feed disconnected";
       };
 
-      async function runCrawler() {
-        await fetch(`${API_BASE}/crawl/run`, {
-          method: "POST",
-        });
+      async function runCrawler(event) {
+        const btn = event.target;
+        const originalText = btn.innerText;
 
-        await loadSnapshots();
-        await loadSourceHealth();
+        try {
+          btn.disabled = true;
+          btn.innerText = "Running...";
+          connectionStatusEl.innerText = "Crawler is running (including retries)...";
+
+          const response = await fetch(`${API_BASE}/crawl/run`, {
+            method: "POST",
+          });
+
+          if (!response.ok) {
+            throw new Error("Crawler failed after multiple retries");
+          }
+
+          connectionStatusEl.innerText = "Crawl successful!";
+        } catch (err) {
+          console.error(err);
+          alert(`Crawl Error: ${err.message}`);
+          connectionStatusEl.innerText = "Crawl failed.";
+        } finally {
+          btn.disabled = false;
+          btn.innerText = originalText;
+          await loadSnapshots();
+          await loadSourceHealth();
+        }
       }
 
       async function loadSnapshots() {

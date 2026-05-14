@@ -1,4 +1,5 @@
 import asyncio
+import random
 from bs4 import BeautifulSoup
 
 from app.crawlers.mock_market_pages import (
@@ -9,20 +10,27 @@ from app.crawlers.mock_market_pages import (
 class MockMarketCrawler:
     def __init__(self):
         self.run_count = 0
+        self.max_retries = 3
+        self.timeout_seconds = 2
 
-    async def fetch_html(self) -> str:
+    async def fetch_html_once(self) -> str:
         """
-        Simulates fetching HTML from an external marketplace.
+        Simulates a single external marketplace fetch.
 
         Real version could use:
         - httpx.AsyncClient
-        - retries
         - timeout handling
+        - retry/backoff
         - proxy rotation
-        - user-agent headers
+        - source-specific headers
         """
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.6)
+
+        should_fail = random.random() < 0.25
+
+        if should_fail:
+            raise TimeoutError("Simulated upstream timeout while fetching market page")
 
         self.run_count += 1
 
@@ -30,6 +38,25 @@ class MockMarketCrawler:
             return MOCK_MARKET_HTML_BATCH_1
 
         return MOCK_MARKET_HTML_BATCH_2
+
+    async def fetch_html(self) -> str:
+        last_error = None
+
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                return await asyncio.wait_for(
+                    self.fetch_html_once(),
+                    timeout=self.timeout_seconds,
+                )
+            except Exception as exc:
+                last_error = exc
+
+                if attempt < self.max_retries:
+                    await asyncio.sleep(attempt * 0.5)
+
+        raise RuntimeError(
+            f"Failed to fetch market page after {self.max_retries} attempts: {last_error}"
+        )
 
     def parse_listings(self, html: str) -> list[dict]:
         soup = BeautifulSoup(html, "html.parser")
