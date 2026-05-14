@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database import Base
 
@@ -14,7 +14,7 @@ class ListingSnapshot(Base):
     status = Column(String, nullable=False)
     source = Column(String, nullable=False)
 
-    captured_at = Column(DateTime, default=datetime.utcnow)
+    captured_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class CrawlRun(Base):
     __tablename__ = "crawl_runs"
@@ -29,5 +29,5 @@ class CrawlRun(Base):
 
     error_message = Column(String, nullable=True)
 
-    started_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     finished_at = Column(DateTime, nullable=True)

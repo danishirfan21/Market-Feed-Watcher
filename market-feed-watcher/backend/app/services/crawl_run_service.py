@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.models import CrawlRun
@@ -24,7 +24,7 @@ def finish_crawl_run(
     crawl_run.status = "success"
     crawl_run.listings_found = listings_found
     crawl_run.changes_detected = changes_detected
-    crawl_run.finished_at = datetime.utcnow()
+    crawl_run.finished_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(crawl_run)
@@ -38,7 +38,7 @@ def fail_crawl_run(
 ):
     crawl_run.status = "failed"
     crawl_run.error_message = error_message
-    crawl_run.finished_at = datetime.utcnow()
+    crawl_run.finished_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(crawl_run)

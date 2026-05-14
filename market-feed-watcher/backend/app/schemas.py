@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 class ListingInput(BaseModel):
@@ -17,8 +17,7 @@ class ListingSnapshotResponse(BaseModel):
     source: str
     captured_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ChangeEvent(BaseModel):
     external_id: str
@@ -39,5 +38,4 @@ class CrawlRunResponse(BaseModel):
     started_at: datetime
     finished_at: datetime | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
