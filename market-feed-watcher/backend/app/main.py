@@ -7,6 +7,8 @@ from app.services.snapshot_service import process_listing_batch, get_recent_snap
 from app.services.health_service import get_source_health
 from app.seed_data import MOCK_LISTINGS_BATCH_1, MOCK_LISTINGS_BATCH_2
 from app.crawlers.mock_market_crawler import MockMarketCrawler
+from app.crawlers.http_market_crawler import HttpMarketCrawler
+from fastapi.staticfiles import StaticFiles
 from app.websocket_manager import WebSocketManager
 from app.services.crawl_run_service import (
     start_crawl_run,
@@ -23,7 +25,13 @@ app = FastAPI(
     version="0.3.0",
 )
 
+app.mount("/static", StaticFiles(directory="."), name="static")
+
 crawler = MockMarketCrawler()
+http_crawler = HttpMarketCrawler(
+    source="local_http_market",
+    url="http://localhost:8000/static/sample_market.html",
+)
 ws_manager = WebSocketManager()
 
 async def broadcast_changes(changes: list[ChangeEvent]):
@@ -129,3 +137,33 @@ def source_health(
     db: Session = Depends(get_db),
 ):
     return get_source_health(db, source)
+
+
+@app.post("/crawl/http", response_model=list[ChangeEvent])
+async def run_http_crawler(db: Session = Depends(get_db)):
+    crawl_run = start_crawl_run(db, source="local_http_market")
+
+    try:
+        raw_listings = await http_crawler.fetch_listings()
+        listings = [ListingInput(**item) for item in raw_listings]
+
+        changes = process_listing_batch(db, listings)
+
+        finish_crawl_run(
+            db=db,
+            crawl_run=crawl_run,
+            listings_found=len(listings),
+            changes_detected=len(changes),
+        )
+
+        await broadcast_changes(changes)
+
+        return changes
+
+    except Exception as exc:
+        fail_crawl_run(
+            db=db,
+            crawl_run=crawl_run,
+            error_message=str(exc),
+        )
+        raise
