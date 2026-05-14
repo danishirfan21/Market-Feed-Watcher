@@ -190,8 +190,8 @@
     </main>
 
     <script>
-      const API_BASE = "http://localhost:8000";
-      const WS_URL = "ws://localhost:8000/ws/changes";
+      const API_BASE = window.location.origin.replace(/\/$/, "");
+      const WS_URL = API_BASE.replace("http", "ws") + "/ws/changes";
 
       const eventsEl = document.getElementById("events");
       const snapshotsEl = document.getElementById("snapshots");

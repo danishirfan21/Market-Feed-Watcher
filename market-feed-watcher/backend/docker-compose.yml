@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  market-feed-watcher:
+    build: .
+    container_name: market-feed-watcher
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - .:/app
+
+    env_file:
+      - .env
+
+    restart: unless-stopped
