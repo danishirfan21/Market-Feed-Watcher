@@ -179,6 +179,13 @@
             <div class="empty">No snapshots loaded yet.</div>
           </div>
         </div>
+
+        <div class="card">
+          <h2>Source Health</h2>
+          <div id="sourceHealth">
+            <div class="empty">No health data loaded yet.</div>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -212,6 +219,7 @@
         });
 
         await loadSnapshots();
+        await loadSourceHealth();
       }
 
       async function loadSnapshots() {
@@ -280,7 +288,55 @@
         eventsEl.innerHTML = `<div class="empty">No live changes yet.</div>`;
       }
 
+      async function loadSourceHealth() {
+        const response = await fetch(`${API_BASE}/health/source/mock_html_market`);
+        const health = await response.json();
+
+        const healthEl = document.getElementById("sourceHealth");
+
+        healthEl.innerHTML = `
+          <div class="snapshot">
+            <div>
+              <div class="snapshot-title">Status</div>
+              <div class="snapshot-meta">${health.source}</div>
+            </div>
+            <div>${health.status}</div>
+          </div>
+
+          <div class="snapshot">
+            <div>
+              <div class="snapshot-title">Success Rate</div>
+              <div class="snapshot-meta">${health.successful_runs}/${health.total_runs} successful</div>
+            </div>
+            <div>${health.success_rate}%</div>
+          </div>
+
+          <div class="snapshot">
+            <div>
+              <div class="snapshot-title">Changes Detected</div>
+              <div class="snapshot-meta">Last 20 crawl runs</div>
+            </div>
+            <div>${health.total_changes_detected}</div>
+          </div>
+
+          <div class="snapshot">
+            <div>
+              <div class="snapshot-title">Avg Listings Found</div>
+              <div class="snapshot-meta">Per crawl run</div>
+            </div>
+            <div>${health.average_listings_found}</div>
+          </div>
+
+          ${
+            health.last_error
+              ? `<div class="event-detail">Last error: ${health.last_error}</div>`
+              : ""
+          }
+        `;
+      }
+
       loadSnapshots();
+      loadSourceHealth();
     </script>
   </body>
 </html>

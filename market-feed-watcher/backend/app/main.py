@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import Base, engine, get_db, SessionLocal
 from app.schemas import ListingInput, ListingSnapshotResponse, ChangeEvent, CrawlRunResponse
 from app.services.snapshot_service import process_listing_batch, get_recent_snapshots
+from app.services.health_service import get_source_health
 from app.seed_data import MOCK_LISTINGS_BATCH_1, MOCK_LISTINGS_BATCH_2
 from app.crawlers.mock_market_crawler import MockMarketCrawler
 from app.websocket_manager import WebSocketManager
@@ -121,3 +122,10 @@ def snapshots(
     db: Session = Depends(get_db),
 ):
     return get_recent_snapshots(db, limit)
+
+@app.get("/health/source/{source}")
+def source_health(
+    source: str,
+    db: Session = Depends(get_db),
+):
+    return get_source_health(db, source)
