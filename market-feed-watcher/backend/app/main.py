@@ -1,6 +1,9 @@
 from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
+import asyncio
+from contextlib import asynccontextmanager
+
 from app.database import Base, engine, get_db, SessionLocal
 from app.schemas import ListingInput, ListingSnapshotResponse, ChangeEvent, CrawlRunResponse
 from app.services.snapshot_service import process_listing_batch, get_recent_snapshots
@@ -32,6 +35,13 @@ http_crawler = HttpMarketCrawler(
     source="local_http_market",
     url="http://localhost:8000/static/sample_market.html",
 )
+
+scheduler_state = {
+    "enabled": False,
+    "interval_seconds": 10,
+    "task": None,
+}
+
 ws_manager = WebSocketManager()
 
 async def broadcast_changes(changes: list[ChangeEvent]):
@@ -40,6 +50,42 @@ async def broadcast_changes(changes: list[ChangeEvent]):
             "type": "market_change",
             "payload": change.model_dump(),
         })
+
+async def execute_mock_crawl():
+    db = SessionLocal()
+    crawl_run = start_crawl_run(db, source="mock_html_market")
+
+    try:
+        raw_listings = await crawler.fetch_listings()
+        listings = [ListingInput(**item) for item in raw_listings]
+
+        changes = process_listing_batch(db, listings)
+
+        finish_crawl_run(
+            db=db,
+            crawl_run=crawl_run,
+            listings_found=len(listings),
+            changes_detected=len(changes),
+        )
+
+        await broadcast_changes(changes)
+
+    except Exception as exc:
+        fail_crawl_run(
+            db=db,
+            crawl_run=crawl_run,
+            error_message=str(exc),
+        )
+
+    finally:
+        db.close()
+
+async def scheduler_loop():
+    while scheduler_state["enabled"]:
+        await execute_mock_crawl()
+        await asyncio.sleep(scheduler_state["interval_seconds"])
+
+
 
 @app.get("/")
 def root():
@@ -167,3 +213,40 @@ async def run_http_crawler(db: Session = Depends(get_db)):
             error_message=str(exc),
         )
         raise
+
+@app.post("/scheduler/start")
+async def start_scheduler(interval_seconds: int = 10):
+    if scheduler_state["enabled"]:
+        return {
+            "status": "already_running",
+            "interval_seconds": scheduler_state["interval_seconds"],
+        }
+
+    scheduler_state["enabled"] = True
+    scheduler_state["interval_seconds"] = interval_seconds
+    scheduler_state["task"] = asyncio.create_task(scheduler_loop())
+
+    return {
+        "status": "started",
+        "interval_seconds": interval_seconds,
+    }
+
+@app.post("/scheduler/stop")
+async def stop_scheduler():
+    scheduler_state["enabled"] = False
+
+    task = scheduler_state.get("task")
+    if task:
+        task.cancel()
+        scheduler_state["task"] = None
+
+    return {
+        "status": "stopped",
+    }
+
+@app.get("/scheduler/status")
+def scheduler_status():
+    return {
+        "enabled": scheduler_state["enabled"],
+        "interval_seconds": scheduler_state["interval_seconds"],
+    }

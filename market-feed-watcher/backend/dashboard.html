@@ -160,6 +160,8 @@
       </section>
 
       <section class="actions">
+        <button onclick="startScheduler()">Start Auto Crawl</button>
+        <button class="secondary" onclick="stopScheduler()">Stop Auto Crawl</button>
         <button onclick="runCrawler(event)">Run Crawler</button>
         <button class="secondary" onclick="loadSnapshots()">Refresh Snapshots</button>
         <button class="secondary" onclick="clearEvents()">Clear Events</button>
@@ -354,6 +356,22 @@
               : ""
           }
         `;
+      }
+
+      async function startScheduler() {
+        await fetch(`${API_BASE}/scheduler/start?interval_seconds=10`, {
+          method: "POST",
+        });
+
+        await loadSourceHealth();
+      }
+
+      async function stopScheduler() {
+        await fetch(`${API_BASE}/scheduler/stop`, {
+          method: "POST",
+        });
+        connectionStatusEl.innerText = "Scheduler stopped";
+        await loadSourceHealth();
       }
 
       loadSnapshots();
