@@ -186,29 +186,35 @@ Open: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
-## Operational Philosophy
+## Project Overview
 
-This project demonstrates a specialized crawler operations backend. The main objective is building the observability and reliability layer required for production crawler pipelines.
+Market Feed Watcher is a backend system designed to explore crawler-style market feed infrastructure. The system simulates marketplace sources, parses listing data, stores snapshots, detects price and status changes, and streams those updates to a live dashboard through WebSockets.
 
-A high-scale version of this system could include:
+Beyond basic scraping, the project implements:
+- **Crawl Run Tracking**: Monitoring execution status and duration.
+- **Reliability Layer**: Robust retry and timeout handling for upstream sources.
+- **Operational Metrics**: Real-time source health and success rate analytics.
+- **Change Detection**: Automated diffing of snapshots to identify market movements.
+- **Testing**: Comprehensive unit tests covering the core change-detection logic.
 
-- Real external marketplace adapters
-- `httpx.AsyncClient` with custom middleware
-- Proxy rotation and user-agent management
-- Distributed task processing (Celery/Arq)
-- Queue-based ingestion
-- Redis for caching and rate limiting
-- Source-specific crawl policies
-- Automated alerting on source degradation
-- CI/CD deployment pipelines
+## Engineering Insights
 
----
+Building this system highlighted that production-grade crawlers are about much more than just fetching pages. The primary engineering challenges lie in the surrounding infrastructure:
 
-## Future Improvements
+- **Integration Reliability**: Ensuring source integrations remain stable under transient failures.
+- **Data Significance**: Detecting meaningful changes amidst high volumes of data.
+- **Observability**: Making system health and failures visible through tracking and monitoring.
+- **Extensibility**: Designing the architecture so new sources can be added with minimal friction.
 
-- Add background scheduled jobs (Cron/BackgroundTasks)
-- Add queue-based ingestion (Redis/RabbitMQ)
-- Add Prometheus metrics & Grafana dashboards
-- Add unit/integration tests
-- Add source configuration database table
-- Add admin controls for crawl frequency and concurrency
+The project is structured as an operations-first backend to address these specific infrastructure patterns.
+
+## Production Scaling
+
+To extend this system for high-scale production environments, the following enhancements would be prioritized:
+
+- **Distributed Processing**: Queue-based workers using Redis/RQ or Celery for parallelized crawling.
+- **Resource Management**: Proxy rotation, request policy management, and per-source rate-limiting.
+- **Advanced Observability**: Structured logging, Prometheus metrics, and automated alerting for degraded sources.
+- **Database Optimization**: PostgreSQL indexes optimized for high-volume snapshot history.
+- **Access Control**: Authentication layers for internal dashboard and API access.
+- **CI/CD Pipeline**: Automated testing and deployment workflows for reliable updates.
