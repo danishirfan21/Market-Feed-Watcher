@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WS Debug Console | Market Feed Watcher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --danger: #f85149;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .toolbar {
+      padding: 16px 24px;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .title-area {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid transparent;
+    }
+
+    .badge.connected {
+      background: rgba(63, 185, 80, 0.1);
+      color: var(--success);
+      border-color: rgba(63, 185, 80, 0.2);
+    }
+
+    .badge.disconnected {
+      background: rgba(248, 81, 73, 0.1);
+      color: var(--danger);
+      border-color: rgba(248, 81, 73, 0.2);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    button {
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: #30363d;
+      border-color: #8b949e;
+    }
+
+    .console {
+      flex-grow: 1;
+      padding: 24px;
+      overflow-y: auto;
+      font-family: 'Fira Code', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .log-entry {
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px dashed var(--border);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .timestamp {
+      color: #8b949e;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .system-msg {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .json-block {
+      margin: 8px 0 0 0;
+      padding: 12px;
+      background: #010409;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      overflow-x: auto;
+    }
+
+    /* Simple JSON Syntax Highlighting */
+    .string { color: #a5d6ff; }
+    .number { color: #79c0ff; }
+    .boolean { color: #56d364; }
+    .null { color: #f85149; }
+    .key { color: #7ee787; }
+
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div class="title-area">
+      <h1>Market Feed WS Console</h1>
+      <div id="statusBadge" class="badge disconnected">
+        <div class="dot"></div>
+        <span id="statusText">Connecting...</span>
+      </div>
+    </div>
+    <button onclick="clearEvents()">Clear Console</button>
+  </div>
+  
+  <div class="console" id="events"></div>
+
+  <script>
+    const API_BASE = window.location.origin.replace(/\/$/, "");
+    const WS_URL = API_BASE.replace("http", "ws") + "/ws/changes";
+    
+    const eventsEl = document.getElementById("events");
+    const statusBadge = document.getElementById("statusBadge");
+    const statusText = document.getElementById("statusText");
+
+    const socket = new WebSocket(WS_URL);
+
+    socket.onopen = () => {
+      statusBadge.className = "badge connected";
+      statusText.innerText = "Connected";
+      addSystemLog("Established WebSocket connection to " + WS_URL);
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        addJsonLog(data);
+      } catch (e) {
+        addSystemLog("Received non-JSON message: " + event.data);
+      }
+    };
+
+    socket.onclose = () => {
+      statusBadge.className = "badge disconnected";
+      statusText.innerText = "Disconnected";
+      addSystemLog("WebSocket connection closed.");
+    };
+
+    function syntaxHighlight(json) {
+      if (typeof json != 'string') {
+        json = JSON.stringify(json, undefined, 2);
+      }
+      json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+        let cls = 'number';
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'key';
+          } else {
+            cls = 'string';
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'boolean';
+        } else if (/null/.test(match)) {
+          cls = 'null';
+        }
+        return '<span class="' + cls + '">' + match + '</span>';
+      });
+    }
+
+    function getTimestamp() {
+      const now = new Date();
+      return now.toISOString().split('T')[1].slice(0, -1); // HH:MM:SS.mmm
+    }
+
+    function addSystemLog(message) {
+      const item = document.createElement("div");
+      item.className = "log-entry";
+      item.innerHTML = `
+        <span class="timestamp">[${getTimestamp()}]</span>
+        <span class="system-msg">${message}</span>
+      `;
+      eventsEl.prepend(item);
+    }
+
+    function addJsonLog(data) {
+      const item = document.createElement("div");
+      item.className = "log-entry";
+      item.innerHTML = `
+        <span class="timestamp">[${getTimestamp()}] Received Payload:</span>
+        <pre class="json-block">${syntaxHighlight(data)}</pre>
+      `;
+      eventsEl.prepend(item);
+    }
+
+    function clearEvents() {
+      eventsEl.innerHTML = "";
+      addSystemLog("Console cleared.");
+    }
+  </script>
+</body>
+</html>

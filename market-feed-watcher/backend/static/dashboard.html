@@ -1,146 +1,412 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <title>Market Feed Watcher</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Market Feed Watcher | Premium Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
+      :root {
+        --bg-color: #0f172a;
+        --card-bg: rgba(30, 41, 59, 0.7);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --accent-blue: #3b82f6;
+        --accent-blue-hover: #2563eb;
+        --accent-teal: #14b8a6;
+        --danger: #ef4444;
+        --success: #10b981;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
-        font-family: Arial, sans-serif;
-        background: #0f172a;
-        color: #e5e7eb;
+        font-family: 'Inter', sans-serif;
+        background: radial-gradient(circle at top left, #1e1b4b, #0f172a 40%, #020617);
+        color: var(--text-main);
+        min-height: 100vh;
       }
 
       .page {
-        max-width: 960px;
+        max-width: 1200px;
         margin: 0 auto;
-        padding: 32px 20px;
+        padding: 40px 24px;
       }
 
       .header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 28px;
+        align-items: flex-start;
+        margin-bottom: 40px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--card-border);
+      }
+
+      .header-title-container {
+        display: flex;
+        flex-direction: column;
       }
 
       h1 {
         margin: 0;
-        font-size: 28px;
+        font-size: 36px;
+        font-weight: 700;
+        background: linear-gradient(to right, #38bdf8, #818cf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -0.5px;
       }
 
       .subtitle {
-        margin-top: 6px;
-        color: #94a3b8;
+        margin-top: 8px;
+        color: var(--text-muted);
+        font-size: 16px;
+        font-weight: 400;
       }
 
-      .status {
-        padding: 8px 12px;
-        border-radius: 999px;
-        background: #064e3b;
-        color: #a7f3d0;
-        font-size: 13px;
+      .status-badge {
+        padding: 8px 16px;
+        border-radius: 20px;
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success);
+        font-size: 14px;
+        font-weight: 600;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+      }
+
+      .status-badge.disconnected {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger);
+        border-color: rgba(239, 68, 68, 0.2);
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: currentColor;
+        box-shadow: 0 0 8px currentColor;
       }
 
       .actions {
         display: flex;
-        gap: 12px;
-        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 32px;
+        background: var(--card-bg);
+        padding: 20px;
+        border-radius: 16px;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--card-border);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
 
       button {
         border: none;
-        border-radius: 10px;
-        padding: 10px 14px;
-        background: #2563eb;
+        border-radius: 12px;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, var(--accent-blue), #4f46e5);
         color: white;
         cursor: pointer;
         font-weight: 600;
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+        background: linear-gradient(135deg, var(--accent-blue-hover), #4338ca);
+      }
+
+      button:active:not(:disabled) {
+        transform: translateY(0);
       }
 
       button.secondary {
-        background: #334155;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: none;
+      }
+
+      button.secondary:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      button.danger {
+        background: linear-gradient(135deg, var(--danger), #be123c);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+      }
+      
+      button.danger:hover:not(:disabled) {
+        background: linear-gradient(135deg, #dc2626, #9f1239);
+        box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      /* Loader for buttons */
+      .loader {
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-top-color: white;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        animation: spin 1s linear infinite;
+        display: none;
+      }
+      
+      button.loading .loader {
+        display: inline-block;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
 
       .grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 18px;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: 24px;
       }
 
       .card {
-        background: #111827;
-        border: 1px solid #1f2937;
-        border-radius: 16px;
-        padding: 18px;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 20px;
+        padding: 24px;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        max-height: 600px;
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       }
 
       .card h2 {
-        margin: 0 0 14px;
-        font-size: 18px;
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
       }
 
-      .event {
-        border-bottom: 1px solid #1f2937;
-        padding: 12px 0;
+      .card-content {
+        overflow-y: auto;
+        flex-grow: 1;
+        padding-right: 8px;
       }
 
-      .event:last-child {
-        border-bottom: none;
+      /* Scrollbar styling */
+      .card-content::-webkit-scrollbar {
+        width: 6px;
+      }
+      .card-content::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+      }
+      .card-content::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+      }
+      .card-content::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .event, .snapshot, .health-item {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        transition: transform 0.2s, background 0.2s;
+        border: 1px solid transparent;
+        animation: slideIn 0.3s ease-out;
+      }
+
+      @keyframes slideIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .event:hover, .snapshot:hover, .health-item:hover {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.05);
+        transform: translateX(4px);
+      }
+
+      .event:last-child, .snapshot:last-child, .health-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .event-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
       }
 
       .event-type {
-        font-size: 12px;
+        font-size: 11px;
         text-transform: uppercase;
-        color: #38bdf8;
-        letter-spacing: 0.08em;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        padding: 4px 8px;
+        border-radius: 6px;
       }
+      
+      .type-new_listing { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+      .type-price_changed { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; }
+      .type-status_changed { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
 
       .event-title {
-        margin-top: 4px;
-        font-weight: 700;
+        font-weight: 600;
+        font-size: 15px;
       }
 
       .event-detail {
-        margin-top: 4px;
-        color: #cbd5e1;
+        color: var(--text-muted);
         font-size: 14px;
+        margin-top: 6px;
+        line-height: 1.4;
       }
 
       .snapshot {
         display: flex;
         justify-content: space-between;
+        align-items: center;
         gap: 16px;
-        padding: 10px 0;
-        border-bottom: 1px solid #1f2937;
       }
 
-      .snapshot:last-child {
-        border-bottom: none;
+      .snapshot-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
       }
 
       .snapshot-title {
         font-weight: 600;
+        font-size: 15px;
       }
 
       .snapshot-meta {
-        color: #94a3b8;
+        color: var(--text-muted);
         font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
+      
+      .badge {
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: rgba(255,255,255,0.1);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      
+      .badge.available { background: rgba(16, 185, 129, 0.2); color: #a7f3d0; }
+      .badge.sold { background: rgba(239, 68, 68, 0.2); color: #fecaca; }
+
+      .snapshot-price {
+        font-weight: 700;
+        font-size: 16px;
+        color: #e2e8f0;
+        background: rgba(255,255,255,0.05);
+        padding: 6px 12px;
+        border-radius: 8px;
+        white-space: nowrap;
+      }
+
+      .health-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .health-value {
+        font-weight: 700;
+        font-size: 18px;
+        color: #f8fafc;
+      }
+      
+      .health-value.healthy { color: #34d399; }
+      .health-value.degraded { color: #fbbf24; }
+      .health-value.failed { color: #f87171; }
 
       .empty {
-        color: #64748b;
+        color: var(--text-muted);
         font-size: 14px;
+        text-align: center;
+        padding: 40px 20px;
+        background: rgba(0,0,0,0.1);
+        border-radius: 12px;
+        border: 1px dashed rgba(255,255,255,0.1);
+      }
+      
+      .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 0;
+        color: var(--text-muted);
+        gap: 12px;
+      }
+      
+      .loading-state .loader {
+        display: block;
+        width: 32px;
+        height: 32px;
+        border-width: 3px;
+        border-color: rgba(59, 130, 246, 0.3);
+        border-top-color: var(--accent-blue);
       }
 
-      @media (max-width: 760px) {
-        .grid {
-          grid-template-columns: 1fr;
-        }
-
+      @media (max-width: 768px) {
         .header {
-          align-items: flex-start;
           flex-direction: column;
-          gap: 12px;
+          gap: 20px;
+        }
+        .actions {
+          flex-direction: column;
+        }
+        button {
+          width: 100%;
         }
       }
     </style>
@@ -149,43 +415,72 @@
   <body>
     <main class="page">
       <section class="header">
-        <div>
+        <div class="header-title-container">
           <h1>Market Feed Watcher</h1>
           <div class="subtitle">
-            Live crawler change detection for vehicle market listings
+            Real-time crawler change detection & monitoring
           </div>
         </div>
 
-        <div class="status" id="connectionStatus">Connecting...</div>
+        <div class="status-badge" id="connectionStatus">
+          <div class="status-dot"></div>
+          <span>Connecting...</span>
+        </div>
       </section>
 
       <section class="actions">
-        <button onclick="startScheduler()">Start Auto Crawl</button>
-        <button class="secondary" onclick="stopScheduler()">Stop Auto Crawl</button>
-        <button onclick="runCrawler(event)">Run Crawler</button>
-        <button class="secondary" onclick="loadSnapshots()">Refresh Snapshots</button>
-        <button class="secondary" onclick="clearEvents()">Clear Events</button>
+        <button id="btnAutoStart" onclick="startScheduler()">
+          <span class="loader"></span>
+          <span class="btn-text">Start Auto Crawl</span>
+        </button>
+        <button id="btnAutoStop" class="danger" onclick="stopScheduler()" disabled>
+          <span class="loader"></span>
+          <span class="btn-text">Stop Auto Crawl</span>
+        </button>
+        <button id="btnRunCrawler" onclick="runCrawler(event)">
+          <span class="loader"></span>
+          <span class="btn-text">Run Crawler Once</span>
+        </button>
+        <button id="btnRefresh" class="secondary" onclick="loadSnapshots(true)">
+          <span class="loader"></span>
+          <span class="btn-text">Refresh Data</span>
+        </button>
+        <button id="btnClear" class="secondary" onclick="clearEvents()">
+          <span class="btn-text">Clear Feed</span>
+        </button>
       </section>
 
       <section class="grid">
         <div class="card">
-          <h2>Live Change Feed</h2>
-          <div id="events">
-            <div class="empty">No live changes yet.</div>
+          <div class="card-header">
+            <h2>Live Change Feed</h2>
+          </div>
+          <div class="card-content" id="events">
+            <div class="empty">Waiting for market changes...</div>
           </div>
         </div>
 
         <div class="card">
-          <h2>Recent Snapshots</h2>
-          <div id="snapshots">
-            <div class="empty">No snapshots loaded yet.</div>
+          <div class="card-header">
+            <h2>Recent Snapshots</h2>
+          </div>
+          <div class="card-content" id="snapshots">
+            <div class="loading-state">
+              <span class="loader"></span>
+              <span>Loading snapshots...</span>
+            </div>
           </div>
         </div>
 
         <div class="card">
-          <h2>Source Health</h2>
-          <div id="sourceHealth">
-            <div class="empty">No health data loaded yet.</div>
+          <div class="card-header">
+            <h2>Source Health</h2>
+          </div>
+          <div class="card-content" id="sourceHealth">
+            <div class="loading-state">
+              <span class="loader"></span>
+              <span>Loading health data...</span>
+            </div>
           </div>
         </div>
       </section>
@@ -198,32 +493,57 @@
       const eventsEl = document.getElementById("events");
       const snapshotsEl = document.getElementById("snapshots");
       const connectionStatusEl = document.getElementById("connectionStatus");
+      const connectionStatusText = connectionStatusEl.querySelector('span');
+      
+      // Buttons
+      const btnAutoStart = document.getElementById('btnAutoStart');
+      const btnAutoStop = document.getElementById('btnAutoStop');
+      const btnRunCrawler = document.getElementById('btnRunCrawler');
+      const btnRefresh = document.getElementById('btnRefresh');
 
+      let isSchedulerRunning = false;
+
+      // WebSocket Setup
       const socket = new WebSocket(WS_URL);
 
       socket.onopen = () => {
-        connectionStatusEl.innerText = "Live feed connected";
+        connectionStatusEl.classList.remove('disconnected');
+        connectionStatusText.innerText = "Live feed connected";
       };
 
       socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
         renderEvent(data.payload);
         loadSnapshots();
+        loadSourceHealth();
       };
 
       socket.onclose = () => {
-        connectionStatusEl.innerText = "Live feed disconnected";
+        connectionStatusEl.classList.add('disconnected');
+        connectionStatusText.innerText = "Live feed disconnected";
+      };
+      
+      socket.onerror = () => {
+        connectionStatusEl.classList.add('disconnected');
+        connectionStatusText.innerText = "Connection error";
       };
 
-      async function runCrawler(event) {
-        const btn = event.target;
-        const originalText = btn.innerText;
-
-        try {
+      // Utility: Set button loading state
+      function setButtonLoading(btn, isLoading) {
+        if (isLoading) {
+          btn.classList.add('loading');
           btn.disabled = true;
-          btn.innerText = "Running...";
-          connectionStatusEl.innerText = "Crawler is running (including retries)...";
+        } else {
+          btn.classList.remove('loading');
+          btn.disabled = false;
+        }
+      }
 
+      async function runCrawler(event) {
+        try {
+          setButtonLoading(btnRunCrawler, true);
+          btnRunCrawler.querySelector('.btn-text').innerText = "Running...";
+          
           const response = await fetch(`${API_BASE}/crawl/run`, {
             method: "POST",
           });
@@ -231,41 +551,48 @@
           if (!response.ok) {
             throw new Error("Crawler failed after multiple retries");
           }
-
-          connectionStatusEl.innerText = "Crawl successful!";
         } catch (err) {
           console.error(err);
-          alert(`Crawl Error: ${err.message}`);
-          connectionStatusEl.innerText = "Crawl failed.";
+          renderErrorEvent(`Crawl Error: ${err.message}`);
         } finally {
-          btn.disabled = false;
-          btn.innerText = originalText;
+          setButtonLoading(btnRunCrawler, false);
+          btnRunCrawler.querySelector('.btn-text').innerText = "Run Crawler Once";
           await loadSnapshots();
           await loadSourceHealth();
         }
       }
 
-      async function loadSnapshots() {
+      async function loadSnapshots(isRefreshBtn = false) {
+        if (isRefreshBtn) {
+          setButtonLoading(btnRefresh, true);
+        }
+        
         try {
           const response = await fetch(`${API_BASE}/snapshots?limit=10`);
+          if (!response.ok) throw new Error("Failed to fetch snapshots");
           const snapshots = await response.json();
 
           if (!snapshots.length) {
-            snapshotsEl.innerHTML = `<div class="empty">No snapshots available.</div>`;
+            snapshotsEl.innerHTML = `<div class="empty">No snapshots available. Run the crawler to populate data.</div>`;
             return;
           }
 
           snapshotsEl.innerHTML = snapshots
             .map((snapshot) => {
+              const statusClass = snapshot.status.toLowerCase() === 'available' ? 'available' : 'sold';
               return `
                 <div class="snapshot">
-                  <div>
+                  <div class="snapshot-info">
                     <div class="snapshot-title">${snapshot.title}</div>
                     <div class="snapshot-meta">
-                      ${snapshot.external_id} · ${snapshot.status} · ${snapshot.source}
+                      <span>${snapshot.external_id}</span>
+                      <span>·</span>
+                      <span class="badge ${statusClass}">${snapshot.status}</span>
+                      <span>·</span>
+                      <span>${snapshot.source}</span>
                     </div>
                   </div>
-                  <div>
+                  <div class="snapshot-price">
                     Rs ${snapshot.price.toLocaleString()}
                   </div>
                 </div>
@@ -274,7 +601,12 @@
             .join("");
         } catch (err) {
           console.error("Failed to load snapshots:", err);
-          snapshotsEl.innerHTML = `<div class="empty">Failed to load snapshots.</div>`;
+          snapshotsEl.innerHTML = `<div class="empty">Failed to load snapshots.<br><small>${err.message}</small></div>`;
+        } finally {
+          if (isRefreshBtn) {
+            setButtonLoading(btnRefresh, false);
+            loadSourceHealth(); // Also refresh health if requested via button
+          }
         }
       }
 
@@ -284,109 +616,186 @@
         }
 
         const detail = getChangeDetail(change);
+        const typeClass = `type-${change.change_type}`;
+        const formattedType = change.change_type.replace(/_/g, " ");
 
         const item = document.createElement("div");
         item.className = "event";
         item.innerHTML = `
-          <div class="event-type">${change.change_type.replaceAll("_", " ")}</div>
-          <div class="event-title">${change.title}</div>
+          <div class="event-header">
+            <span class="event-title">${change.title}</span>
+            <span class="event-type ${typeClass}">${formattedType}</span>
+          </div>
           <div class="event-detail">${detail}</div>
         `;
 
         eventsEl.prepend(item);
       }
+      
+      function renderErrorEvent(message) {
+        if (eventsEl.querySelector(".empty")) {
+          eventsEl.innerHTML = "";
+        }
+        const item = document.createElement("div");
+        item.className = "event";
+        item.style.borderLeft = "4px solid var(--danger)";
+        item.innerHTML = `
+          <div class="event-header">
+            <span class="event-title" style="color: var(--danger)">Error</span>
+            <span class="event-type" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">SYSTEM</span>
+          </div>
+          <div class="event-detail">${message}</div>
+        `;
+        eventsEl.prepend(item);
+      }
 
       function getChangeDetail(change) {
         if (change.change_type === "new_listing") {
-          return `New listing detected at Rs ${change.new_price.toLocaleString()}`;
+          return `New listing detected at <strong>Rs ${change.new_price.toLocaleString()}</strong>`;
         }
-
         if (change.change_type === "price_changed") {
-          return `Price changed from Rs ${change.old_price.toLocaleString()} to Rs ${change.new_price.toLocaleString()}`;
+          const trend = change.new_price > change.old_price ? '↗️ increased' : '↘️ decreased';
+          return `Price ${trend} from Rs ${change.old_price.toLocaleString()} to <strong>Rs ${change.new_price.toLocaleString()}</strong>`;
         }
-
         if (change.change_type === "status_changed") {
-          return `Status changed from ${change.old_status} to ${change.new_status}`;
+          return `Status changed from <span class="badge" style="opacity:0.7">${change.old_status}</span> to <span class="badge ${change.new_status === 'available' ? 'available' : 'sold'}">${change.new_status}</span>`;
         }
-
         return "Market listing changed.";
       }
 
       function clearEvents() {
-        eventsEl.innerHTML = `<div class="empty">No live changes yet.</div>`;
+        eventsEl.innerHTML = `<div class="empty">Waiting for market changes...</div>`;
       }
 
       async function loadSourceHealth() {
         try {
           const response = await fetch(`${API_BASE}/health/source/mock_html_market`);
+          if (!response.ok) throw new Error("Failed to fetch health data");
           const health = await response.json();
 
-          const healthEl = document.getElementById("sourceHealth");
+          let statusClass = "healthy";
+          if (health.status === "degraded") statusClass = "degraded";
+          if (health.status === "failed") statusClass = "failed";
+
+          healthEl = document.getElementById("sourceHealth");
 
           healthEl.innerHTML = `
-            <div class="snapshot">
-              <div>
-                <div class="snapshot-title">Status</div>
+            <div class="health-item">
+              <div class="snapshot-info">
+                <div class="snapshot-title">System Status</div>
                 <div class="snapshot-meta">${health.source}</div>
               </div>
-              <div>${health.status}</div>
+              <div class="health-value ${statusClass}" style="text-transform: capitalize;">${health.status}</div>
             </div>
 
-            <div class="snapshot">
-              <div>
+            <div class="health-item">
+              <div class="snapshot-info">
                 <div class="snapshot-title">Success Rate</div>
-                <div class="snapshot-meta">${health.successful_runs}/${health.total_runs} successful</div>
+                <div class="snapshot-meta">${health.successful_runs}/${health.total_runs} successful runs</div>
               </div>
-              <div>${health.success_rate}%</div>
+              <div class="health-value ${health.success_rate >= 90 ? 'healthy' : (health.success_rate >= 70 ? 'degraded' : 'failed')}">${health.success_rate}%</div>
             </div>
 
-            <div class="snapshot">
-              <div>
+            <div class="health-item">
+              <div class="snapshot-info">
                 <div class="snapshot-title">Changes Detected</div>
-                <div class="snapshot-meta">Last 20 crawl runs</div>
+                <div class="snapshot-meta">Over last 20 runs</div>
               </div>
-              <div>${health.total_changes_detected}</div>
+              <div class="health-value">${health.total_changes_detected}</div>
             </div>
 
-            <div class="snapshot">
-              <div>
+            <div class="health-item">
+              <div class="snapshot-info">
                 <div class="snapshot-title">Avg Listings Found</div>
                 <div class="snapshot-meta">Per crawl run</div>
               </div>
-              <div>${health.average_listings_found}</div>
+              <div class="health-value">${health.average_listings_found}</div>
             </div>
 
             ${
               health.last_error
-                ? `<div class="event-detail">Last error: ${health.last_error}</div>`
+                ? `<div class="event" style="margin-top: 16px; border-left: 3px solid var(--danger); background: rgba(239, 68, 68, 0.05);">
+                    <div style="font-size: 12px; color: var(--danger); font-weight: bold; margin-bottom: 4px;">LAST ERROR</div>
+                    <div style="font-size: 13px; color: #cbd5e1; word-break: break-word;">${health.last_error}</div>
+                   </div>`
                 : ""
             }
           `;
         } catch (err) {
           console.error("Failed to load source health:", err);
           const healthEl = document.getElementById("sourceHealth");
-          healthEl.innerHTML = `<div class="empty">Failed to load health data.</div>`;
+          healthEl.innerHTML = `<div class="empty">Failed to load health data.<br><small>${err.message}</small></div>`;
+        }
+      }
+
+      async function checkSchedulerStatus() {
+        try {
+          const response = await fetch(`${API_BASE}/scheduler/status`);
+          if (response.ok) {
+            const status = await response.json();
+            isSchedulerRunning = status.enabled;
+            updateSchedulerButtons();
+          }
+        } catch (e) {
+          console.error("Failed to check scheduler status", e);
+        }
+      }
+
+      function updateSchedulerButtons() {
+        btnAutoStart.disabled = isSchedulerRunning;
+        btnAutoStop.disabled = !isSchedulerRunning;
+        if (isSchedulerRunning) {
+          btnAutoStart.classList.add('secondary');
+          btnAutoStop.classList.remove('secondary');
+        } else {
+          btnAutoStart.classList.remove('secondary');
+          btnAutoStop.classList.add('secondary');
         }
       }
 
       async function startScheduler() {
-        await fetch(`${API_BASE}/scheduler/start?interval_seconds=10`, {
-          method: "POST",
-        });
-
-        await loadSourceHealth();
+        try {
+          setButtonLoading(btnAutoStart, true);
+          const response = await fetch(`${API_BASE}/scheduler/start?interval_seconds=10`, {
+            method: "POST",
+          });
+          if (response.ok) {
+            isSchedulerRunning = true;
+            updateSchedulerButtons();
+          }
+        } catch (e) {
+          console.error(e);
+          renderErrorEvent("Failed to start scheduler");
+        } finally {
+          setButtonLoading(btnAutoStart, false);
+          await loadSourceHealth();
+        }
       }
 
       async function stopScheduler() {
-        await fetch(`${API_BASE}/scheduler/stop`, {
-          method: "POST",
-        });
-        connectionStatusEl.innerText = "Scheduler stopped";
-        await loadSourceHealth();
+        try {
+          setButtonLoading(btnAutoStop, true);
+          const response = await fetch(`${API_BASE}/scheduler/stop`, {
+            method: "POST",
+          });
+          if (response.ok) {
+            isSchedulerRunning = false;
+            updateSchedulerButtons();
+          }
+        } catch (e) {
+          console.error(e);
+          renderErrorEvent("Failed to stop scheduler");
+        } finally {
+          setButtonLoading(btnAutoStop, false);
+          await loadSourceHealth();
+        }
       }
 
-      loadSnapshots();
-      loadSourceHealth();
+      // Initial load
+      checkSchedulerStatus().then(() => {
+        loadSnapshots();
+        loadSourceHealth();
+      });
     </script>
   </body>
 </html>
