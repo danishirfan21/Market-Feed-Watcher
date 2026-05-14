@@ -27,12 +27,12 @@ class MockMarketCrawler:
 
         await asyncio.sleep(0.6)
 
+        self.run_count += 1
+
         should_fail = random.random() < 0.25
 
         if should_fail:
             raise TimeoutError("Simulated upstream timeout while fetching market page")
-
-        self.run_count += 1
 
         if self.run_count == 1:
             return MOCK_MARKET_HTML_BATCH_1

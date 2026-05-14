@@ -177,11 +177,17 @@ Open: [http://localhost:8000/docs](http://localhost:8000/docs)
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
 | `/` | `GET` | Root service status and version |
-| `/crawl/run` | `POST` | Triggers the async crawler (with retry logic) |
+| `/crawl/run` | `POST` | Triggers the mock async crawler (with retry logic) |
+| `/crawl/http` | `POST` | Triggers the HTTP crawler against a real URL |
 | `/ingest` | `POST` | Manually ingest a raw batch of listing data |
 | `/snapshots` | `GET` | Retrieve the latest captured listing snapshots |
 | `/crawl-runs` | `GET` | History and status of recent crawler executions |
 | `/health/source/{name}` | `GET` | Detailed reliability and success rate metrics |
+| `/scheduler/start` | `POST` | Start auto-crawl on a configurable interval |
+| `/scheduler/stop` | `POST` | Stop the auto-crawl scheduler |
+| `/scheduler/status` | `GET` | Check if the scheduler is running |
+| `/demo/batch-1` | `POST` | Ingest seed data batch 1 (initial listings) |
+| `/demo/batch-2` | `POST` | Ingest seed data batch 2 (with changes) |
 | `/ws/changes` | `WS` | Real-time WebSocket feed for live updates |
 
 ---

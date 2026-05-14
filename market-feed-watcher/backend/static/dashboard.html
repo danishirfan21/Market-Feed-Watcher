@@ -246,31 +246,36 @@
       }
 
       async function loadSnapshots() {
-        const response = await fetch(`${API_BASE}/snapshots?limit=10`);
-        const snapshots = await response.json();
+        try {
+          const response = await fetch(`${API_BASE}/snapshots?limit=10`);
+          const snapshots = await response.json();
 
-        if (!snapshots.length) {
-          snapshotsEl.innerHTML = `<div class="empty">No snapshots available.</div>`;
-          return;
-        }
+          if (!snapshots.length) {
+            snapshotsEl.innerHTML = `<div class="empty">No snapshots available.</div>`;
+            return;
+          }
 
-        snapshotsEl.innerHTML = snapshots
-          .map((snapshot) => {
-            return `
-              <div class="snapshot">
-                <div>
-                  <div class="snapshot-title">${snapshot.title}</div>
-                  <div class="snapshot-meta">
-                    ${snapshot.external_id} · ${snapshot.status} · ${snapshot.source}
+          snapshotsEl.innerHTML = snapshots
+            .map((snapshot) => {
+              return `
+                <div class="snapshot">
+                  <div>
+                    <div class="snapshot-title">${snapshot.title}</div>
+                    <div class="snapshot-meta">
+                      ${snapshot.external_id} · ${snapshot.status} · ${snapshot.source}
+                    </div>
+                  </div>
+                  <div>
+                    Rs ${snapshot.price.toLocaleString()}
                   </div>
                 </div>
-                <div>
-                  Rs ${snapshot.price.toLocaleString()}
-                </div>
-              </div>
-            `;
-          })
-          .join("");
+              `;
+            })
+            .join("");
+        } catch (err) {
+          console.error("Failed to load snapshots:", err);
+          snapshotsEl.innerHTML = `<div class="empty">Failed to load snapshots.</div>`;
+        }
       }
 
       function renderEvent(change) {
@@ -312,50 +317,56 @@
       }
 
       async function loadSourceHealth() {
-        const response = await fetch(`${API_BASE}/health/source/mock_html_market`);
-        const health = await response.json();
+        try {
+          const response = await fetch(`${API_BASE}/health/source/mock_html_market`);
+          const health = await response.json();
 
-        const healthEl = document.getElementById("sourceHealth");
+          const healthEl = document.getElementById("sourceHealth");
 
-        healthEl.innerHTML = `
-          <div class="snapshot">
-            <div>
-              <div class="snapshot-title">Status</div>
-              <div class="snapshot-meta">${health.source}</div>
+          healthEl.innerHTML = `
+            <div class="snapshot">
+              <div>
+                <div class="snapshot-title">Status</div>
+                <div class="snapshot-meta">${health.source}</div>
+              </div>
+              <div>${health.status}</div>
             </div>
-            <div>${health.status}</div>
-          </div>
 
-          <div class="snapshot">
-            <div>
-              <div class="snapshot-title">Success Rate</div>
-              <div class="snapshot-meta">${health.successful_runs}/${health.total_runs} successful</div>
+            <div class="snapshot">
+              <div>
+                <div class="snapshot-title">Success Rate</div>
+                <div class="snapshot-meta">${health.successful_runs}/${health.total_runs} successful</div>
+              </div>
+              <div>${health.success_rate}%</div>
             </div>
-            <div>${health.success_rate}%</div>
-          </div>
 
-          <div class="snapshot">
-            <div>
-              <div class="snapshot-title">Changes Detected</div>
-              <div class="snapshot-meta">Last 20 crawl runs</div>
+            <div class="snapshot">
+              <div>
+                <div class="snapshot-title">Changes Detected</div>
+                <div class="snapshot-meta">Last 20 crawl runs</div>
+              </div>
+              <div>${health.total_changes_detected}</div>
             </div>
-            <div>${health.total_changes_detected}</div>
-          </div>
 
-          <div class="snapshot">
-            <div>
-              <div class="snapshot-title">Avg Listings Found</div>
-              <div class="snapshot-meta">Per crawl run</div>
+            <div class="snapshot">
+              <div>
+                <div class="snapshot-title">Avg Listings Found</div>
+                <div class="snapshot-meta">Per crawl run</div>
+              </div>
+              <div>${health.average_listings_found}</div>
             </div>
-            <div>${health.average_listings_found}</div>
-          </div>
 
-          ${
-            health.last_error
-              ? `<div class="event-detail">Last error: ${health.last_error}</div>`
-              : ""
-          }
-        `;
+            ${
+              health.last_error
+                ? `<div class="event-detail">Last error: ${health.last_error}</div>`
+                : ""
+            }
+          `;
+        } catch (err) {
+          console.error("Failed to load source health:", err);
+          const healthEl = document.getElementById("sourceHealth");
+          healthEl.innerHTML = `<div class="empty">Failed to load health data.</div>`;
+        }
       }
 
       async function startScheduler() {

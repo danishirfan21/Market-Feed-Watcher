@@ -1,8 +1,10 @@
-from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect
-from sqlalchemy.orm import Session
-
 import asyncio
-from contextlib import asynccontextmanager
+import logging
+
+from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session
 
 from app.database import Base, engine, get_db, SessionLocal
 from app.schemas import ListingInput, ListingSnapshotResponse, ChangeEvent, CrawlRunResponse
@@ -11,7 +13,6 @@ from app.services.health_service import get_source_health
 from app.seed_data import MOCK_LISTINGS_BATCH_1, MOCK_LISTINGS_BATCH_2
 from app.crawlers.mock_market_crawler import MockMarketCrawler
 from app.crawlers.http_market_crawler import HttpMarketCrawler
-from fastapi.staticfiles import StaticFiles
 from app.websocket_manager import WebSocketManager
 from app.services.crawl_run_service import (
     start_crawl_run,
@@ -19,6 +20,8 @@ from app.services.crawl_run_service import (
     fail_crawl_run,
     get_recent_crawl_runs,
 )
+
+logger = logging.getLogger(__name__)
 
 Base.metadata.create_all(bind=engine)
 
@@ -28,7 +31,14 @@ app = FastAPI(
     version="0.3.0",
 )
 
-app.mount("/static", StaticFiles(directory="."), name="static")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 crawler = MockMarketCrawler()
 http_crawler = HttpMarketCrawler(
@@ -71,6 +81,7 @@ async def execute_mock_crawl():
         await broadcast_changes(changes)
 
     except Exception as exc:
+        logger.error(f"[scheduler] Crawl failed: {exc}")
         fail_crawl_run(
             db=db,
             crawl_run=crawl_run,
@@ -104,6 +115,8 @@ async def websocket_changes(websocket: WebSocket):
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+    except Exception:
         ws_manager.disconnect(websocket)
 
 @app.post("/ingest", response_model=list[ChangeEvent])
