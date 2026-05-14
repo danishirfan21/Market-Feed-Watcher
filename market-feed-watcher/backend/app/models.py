@@ -15,3 +15,19 @@ class ListingSnapshot(Base):
     source = Column(String, nullable=False)
 
     captured_at = Column(DateTime, default=datetime.utcnow)
+
+class CrawlRun(Base):
+    __tablename__ = "crawl_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    source = Column(String, nullable=False)
+    status = Column(String, nullable=False)
+
+    listings_found = Column(Integer, default=0)
+    changes_detected = Column(Integer, default=0)
+
+    error_message = Column(String, nullable=True)
+
+    started_at = Column(DateTime, default=datetime.utcnow)
+    finished_at = Column(DateTime, nullable=True)

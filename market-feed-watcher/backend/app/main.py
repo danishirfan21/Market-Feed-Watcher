@@ -2,11 +2,17 @@ from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
 from app.database import Base, engine, get_db, SessionLocal
-from app.schemas import ListingInput, ListingSnapshotResponse, ChangeEvent
+from app.schemas import ListingInput, ListingSnapshotResponse, ChangeEvent, CrawlRunResponse
 from app.services.snapshot_service import process_listing_batch, get_recent_snapshots
 from app.seed_data import MOCK_LISTINGS_BATCH_1, MOCK_LISTINGS_BATCH_2
 from app.crawlers.mock_market_crawler import MockMarketCrawler
 from app.websocket_manager import WebSocketManager
+from app.services.crawl_run_service import (
+    start_crawl_run,
+    finish_crawl_run,
+    fail_crawl_run,
+    get_recent_crawl_runs,
+)
 
 Base.metadata.create_all(bind=engine)
 
@@ -57,13 +63,39 @@ async def ingest_listings(
 
 @app.post("/crawl/run", response_model=list[ChangeEvent])
 async def run_crawler(db: Session = Depends(get_db)):
-    raw_listings = await crawler.fetch_listings()
-    listings = [ListingInput(**item) for item in raw_listings]
+    crawl_run = start_crawl_run(db, source="mock_html_market")
 
-    changes = process_listing_batch(db, listings)
-    await broadcast_changes(changes)
+    try:
+        raw_listings = await crawler.fetch_listings()
+        listings = [ListingInput(**item) for item in raw_listings]
 
-    return changes
+        changes = process_listing_batch(db, listings)
+
+        finish_crawl_run(
+            db=db,
+            crawl_run=crawl_run,
+            listings_found=len(listings),
+            changes_detected=len(changes),
+        )
+
+        await broadcast_changes(changes)
+
+        return changes
+
+    except Exception as exc:
+        fail_crawl_run(
+            db=db,
+            crawl_run=crawl_run,
+            error_message=str(exc),
+        )
+        raise
+
+@app.get("/crawl-runs", response_model=list[CrawlRunResponse])
+def crawl_runs(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+):
+    return get_recent_crawl_runs(db, limit)
 
 @app.post("/demo/batch-1", response_model=list[ChangeEvent])
 async def ingest_demo_batch_1(db: Session = Depends(get_db)):

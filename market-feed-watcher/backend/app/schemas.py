@@ -28,3 +28,16 @@ class ChangeEvent(BaseModel):
     old_status: str | None = None
     new_status: str | None = None
     change_type: str
+
+class CrawlRunResponse(BaseModel):
+    id: int
+    source: str
+    status: str
+    listings_found: int
+    changes_detected: int
+    error_message: str | None = None
+    started_at: datetime
+    finished_at: datetime | None = None
+
+    class Config:
+        from_attributes = True
