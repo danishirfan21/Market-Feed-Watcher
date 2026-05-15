@@ -168,7 +168,6 @@
         box-shadow: none;
       }
 
-      /* Loader for buttons */
       .loader {
         border: 2px solid rgba(255, 255, 255, 0.2);
         border-top-color: white;
@@ -232,7 +231,6 @@
         padding-right: 4px;
       }
 
-      /* Premium Scrollbar */
       .card-content::-webkit-scrollbar {
         width: 5px;
       }
@@ -256,7 +254,7 @@
         transition: transform 0.2s, background 0.2s;
         border: 1px solid transparent;
         animation: slideIn 0.3s ease-out;
-        min-width: 0; /* Prevents flex children from overflowing */
+        min-width: 0;
       }
 
       @keyframes slideIn {
@@ -318,7 +316,7 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
-        min-width: 0; /* Important for ellipsis to work */
+        min-width: 0;
         flex: 1;
       }
 
@@ -504,8 +502,6 @@
       const snapshotsEl = document.getElementById("snapshots");
       const connectionStatusEl = document.getElementById("connectionStatus");
       const connectionStatusText = connectionStatusEl.querySelector('span');
-      
-      // Buttons
       const btnAutoStart = document.getElementById('btnAutoStart');
       const btnAutoStop = document.getElementById('btnAutoStop');
       const btnRunCrawler = document.getElementById('btnRunCrawler');
@@ -513,7 +509,6 @@
 
       let isSchedulerRunning = false;
 
-      // WebSocket Setup
       const socket = new WebSocket(WS_URL);
 
       socket.onopen = () => {
@@ -523,7 +518,8 @@
 
       socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        renderEvent(data.payload);
+        const changes = Array.isArray(data.payload) ? data.payload : [data.payload];
+        changes.filter(Boolean).reverse().forEach(renderEvent);
         loadSnapshots();
         loadSourceHealth();
       };
@@ -538,7 +534,6 @@
         connectionStatusText.innerText = "Connection error";
       };
 
-      // Utility: Set button loading state
       function setButtonLoading(btn, isLoading) {
         if (isLoading) {
           btn.classList.add('loading');
@@ -559,7 +554,12 @@
           });
 
           if (!response.ok) {
-            throw new Error("Crawler failed after multiple retries");
+            let message = "Crawler failed after multiple retries";
+            try {
+              const body = await response.json();
+              message = body.detail?.message || body.detail || message;
+            } catch (_) {}
+            throw new Error(message);
           }
         } catch (err) {
           console.error(err);
@@ -615,7 +615,7 @@
         } finally {
           if (isRefreshBtn) {
             setButtonLoading(btnRefresh, false);
-            loadSourceHealth(); // Also refresh health if requested via button
+            loadSourceHealth();
           }
         }
       }
@@ -664,7 +664,7 @@
           return `New listing detected at <strong>Rs ${change.new_price.toLocaleString()}</strong>`;
         }
         if (change.change_type === "price_changed") {
-          const trend = change.new_price > change.old_price ? '↗️ increased' : '↘️ decreased';
+          const trend = change.new_price > change.old_price ? 'increased' : 'decreased';
           return `Price ${trend} from Rs ${change.old_price.toLocaleString()} to <strong>Rs ${change.new_price.toLocaleString()}</strong>`;
         }
         if (change.change_type === "status_changed") {
@@ -687,7 +687,7 @@
           if (health.status === "degraded") statusClass = "degraded";
           if (health.status === "failed") statusClass = "failed";
 
-          healthEl = document.getElementById("sourceHealth");
+          const healthEl = document.getElementById("sourceHealth");
 
           healthEl.innerHTML = `
             <div class="health-item">
@@ -743,7 +743,7 @@
           const response = await fetch(`${API_BASE}/scheduler/status`);
           if (response.ok) {
             const status = await response.json();
-            isSchedulerRunning = status.enabled;
+            isSchedulerRunning = status.running;
             updateSchedulerButtons();
           }
         } catch (e) {
@@ -801,7 +801,6 @@
         }
       }
 
-      // Initial load
       checkSchedulerStatus().then(() => {
         loadSnapshots();
         loadSourceHealth();
