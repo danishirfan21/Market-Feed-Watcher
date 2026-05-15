@@ -40,17 +40,16 @@ The project is intentionally small, but designed around real backend concerns:
        ↓
 [ HTML Parser ]    -->  BeautifulSoup extraction & normalization
        ↓
-[ Database ]       -->  Supabase (PostgreSQL) snapshot storage
+[ Database ]       -->  Local PostgreSQL via Docker Compose, or hosted PostgreSQL/Supabase
        ↓
 [ Change Engine ]  -->  Diffing current vs previous snapshots
        ↓
 [ Ops Tracking ]   -->  Crawl logs & Source Health metrics
        ↓
-[ Delivery ]       -->  REST API + WebSocket broadcast
+[ Delivery ]       -->  REST API + batched WebSocket broadcast
        ↓
 [ UI Dashboard ]   -->  Live visual monitoring
 ```
-
 
 ---
 
@@ -59,7 +58,7 @@ The project is intentionally small, but designed around real backend concerns:
 - Python
 - FastAPI
 - SQLAlchemy
-- Supabase (PostgreSQL)
+- PostgreSQL / Supabase
 - BeautifulSoup
 - WebSockets
 - Docker Compose
@@ -136,33 +135,48 @@ The dashboard shows:
 ## Running Locally
 
 ### Option 1: Python
+
+Create a `.env` file first. For quick local development, SQLite works:
+
 ```bash
-cd backend
+cd market-feed-watcher/backend
+printf "DATABASE_URL=sqlite:///./market_feed_watcher.db\nAPP_URL=http://localhost:8000\nLOG_LEVEL=INFO\n" > .env
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
 Open: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-Then open: `dashboard.html`
-
----
+Dashboard: [http://localhost:8000/static/dashboard.html](http://localhost:8000/static/dashboard.html)
 
 ### Option 2: Docker Compose
+
+Docker Compose starts both the API and a local PostgreSQL database. You do not need Supabase for local development.
+
 ```bash
-cd backend
+cd market-feed-watcher/backend
 docker compose up --build
 ```
 
 Open: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+Dashboard: [http://localhost:8000/static/dashboard.html](http://localhost:8000/static/dashboard.html)
+
+### Hosted Database
+
+For Supabase or another hosted PostgreSQL instance, set `DATABASE_URL` in `.env` or your deployment environment:
+
+```bash
+DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@[YOUR-HOST]:5432/postgres
+```
 
 ---
 
 ## Demo Flow
 
 1. Start the backend.
-2. Open `dashboard.html`.
-3. Click **Run Crawler**.
+2. Open the dashboard at `/static/dashboard.html`.
+3. Click **Run Crawler Once**.
 4. First run creates initial listing snapshots.
 5. Second run detects:
    - Honda Civic price change
@@ -177,7 +191,7 @@ Open: [http://localhost:8000/docs](http://localhost:8000/docs)
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
 | `/` | `GET` | Root service status and version |
-| `/crawl/run` | `POST` | Triggers the mock async crawler (with retry logic) |
+| `/crawl/run` | `POST` | Triggers the mock async crawler with retry logic |
 | `/crawl/http` | `POST` | Triggers the HTTP crawler against a real URL |
 | `/ingest` | `POST` | Manually ingest a raw batch of listing data |
 | `/snapshots` | `GET` | Retrieve the latest captured listing snapshots |
@@ -188,7 +202,7 @@ Open: [http://localhost:8000/docs](http://localhost:8000/docs)
 | `/scheduler/status` | `GET` | Check if the scheduler is running |
 | `/demo/batch-1` | `POST` | Ingest seed data batch 1 (initial listings) |
 | `/demo/batch-2` | `POST` | Ingest seed data batch 2 (with changes) |
-| `/ws/changes` | `WS` | Real-time WebSocket feed for live updates |
+| `/ws/changes` | `WS` | Real-time WebSocket feed for batched live updates |
 
 ---
 
@@ -197,22 +211,18 @@ Open: [http://localhost:8000/docs](http://localhost:8000/docs)
 Market Feed Watcher is a backend system designed to explore crawler-style market feed infrastructure. The system simulates marketplace sources, parses listing data, stores snapshots, detects price and status changes, and streams those updates to a live dashboard through WebSockets.
 
 Beyond basic scraping, the project implements:
+
 - **Crawl Run Tracking**: Monitoring execution status and duration.
-- **Reliability Layer**: Robust retry and timeout handling for upstream sources.
+- **Reliability Layer**: Retry and timeout handling for upstream sources.
 - **Operational Metrics**: Real-time source health and success rate analytics.
 - **Change Detection**: Automated diffing of snapshots to identify market movements.
-- **Testing**: Comprehensive unit tests covering the core change-detection logic.
+- **Testing**: Unit tests covering the core change-detection and health logic.
 
-## Engineering Insights
+## Operational Notes
 
-Building this system highlighted that production-grade crawlers are about much more than just fetching pages. The primary engineering challenges lie in the surrounding infrastructure:
+The in-app scheduler is intentionally lightweight and safe for a single API process. It uses an async task, cancellation handling, and a process-local lock to avoid duplicate scheduler tasks inside one worker. In a multi-worker production deployment, schedule crawler work outside the API process with a queue or scheduler service.
 
-- **Integration Reliability**: Ensuring source integrations remain stable under transient failures.
-- **Data Significance**: Detecting meaningful changes amidst high volumes of data.
-- **Observability**: Making system health and failures visible through tracking and monitoring.
-- **Extensibility**: Designing the architecture so new sources can be added with minimal friction.
-
-The project is structured as an operations-first backend to address these specific infrastructure patterns.
+Crawler failures are recorded in crawl-run history, logged with context, and returned from API routes as structured error responses.
 
 ## Production Scaling
 

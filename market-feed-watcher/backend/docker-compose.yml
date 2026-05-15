@@ -4,14 +4,36 @@ services:
   market-feed-watcher:
     build: .
     container_name: market-feed-watcher
-
     ports:
       - "8000:8000"
-
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://market_feed:market_feed@postgres:5432/market_feed_watcher}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
       - .:/app
-
-    env_file:
-      - .env
-
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: market-feed-postgres
+    environment:
+      POSTGRES_DB: market_feed_watcher
+      POSTGRES_USER: market_feed
+      POSTGRES_PASSWORD: market_feed
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U market_feed -d market_feed_watcher"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
